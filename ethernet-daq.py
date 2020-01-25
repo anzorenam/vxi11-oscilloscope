@@ -9,14 +9,14 @@ import datetime
 import os
 
 parser=argparse.ArgumentParser()
-parser.add_argument('nwav', help='numero de capturas',type=int)
+parser.add_argument('nwav', help='number of captures',type=int)
 args=parser.parse_args()
 nwav=args.nwav
 
 home=os.environ['HOME']
-ruta='{0}/proyectos/scicrt/scibar-fitting/sphe-response/'.format(home)
+ruta='{0}/data/'.format(home)
 fecha=time.strftime('%y%m%d')
-name='{0}{1}.adc1'.format(ruta,fecha)
+name='{0}{1}.dat1'.format(ruta,fecha)
 
 if os.path.exists(name) == False:
   fdat=open(name,'w')
@@ -26,11 +26,11 @@ else:
     name=name[:-1]+fix
   fdat=open(name,'w')
 
-
 wavenum=0
 buffer_size=1024*1024*2
-vth=-25.0e-3
+vth=-25.0e-3 # trigger level
 
+#ip address cofigured on scope
 scope=vxi11.Instrument("192.168.10.14")
 scope.write(':*cls')
 scope.write(':*cle')
@@ -39,7 +39,7 @@ scope.write(':verb off')
 scope.write(':dat:sou ch1')
 scope.write(':dat:enc fas')
 scope.write(':wfmo:byt_n 1')
-scope.write(':dis:wave off')
+scope.write(':dis:wave off') # turn off display to improve performance
 
 tdel=float(scope.ask(':hor:del:tim?'))
 tpos=float(scope.ask(':hor:pos?'))
@@ -82,8 +82,8 @@ while wavenum < nwav:
 
 t1=time.time()
 dt=datetime.timedelta(seconds=(t1-t0))
-print(u'Adquisición completa en: {0} hrs.'.format(str(dt))[0:7])
-print(u'Tasa de cuentas: {0} (Hz)'.format(nwav/dt.total_seconds()))
+print(u'Acquisition completed in: {0} hrs.'.format(str(dt))[0:7])
+print(u'Capture rate: {0} (Hz)'.format(nwav/dt.total_seconds()))
 scope.write(':clear')
 scope.write(':dis:wave on')
 scope.close()
