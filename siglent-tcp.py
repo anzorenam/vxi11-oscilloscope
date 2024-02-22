@@ -34,6 +34,7 @@ buffer_size=1024*1024*20
 scope=vxi11.Instrument('10.11.13.220')
 scope.write(':chdr off')
 
+vthr=float(scope.ask(':c1:trlv?')) # threshold level mV
 Tsam=scope.ask(':sara?')
 units={'G':1e9,'M':1e6,'k':1e3}
 for ut in units.keys():
@@ -51,9 +52,16 @@ print(yfac,yoff)
 t0=time.time()
 fecha=time.strftime('%d-%m-%y %H:%M:%S',time.localtime(t0))
 fdat.write('RC {0}\n'.format(fecha))
-fdat.write('TP: {0} {1}\n'.format(tdiv,Tsam))
+fdat.write('TP: {0} {1} {2}\n'.format(vthr,tdiv,Tsam))
+scope.write(':trmd single')
 
+T=0
 while (wavenum<nwav):
+  while T!=1:
+    q=int(scope.ask(':inr?'))
+    k=int(scope.ask(':inr?'))
+    T=0x00FF&q
+    time.sleep(0.1)
   scope.write(':c1:wf? dat2')
   data=list(scope.read_raw()[15:])
   data.pop()
@@ -66,15 +74,20 @@ while (wavenum<nwav):
     else:
       pass
     volts.append(d)
-  y=yfac*(np.array(volts)/25)-yoff
-  ttrg=time.strftime('%H:%M:%S',time.localtime(time.time()))
-  fdat.write('FC: {0} {1}\n'.format(ttrg,wavenum))
-  np.savetxt(fdat,y,fmt='%1.4f',newline=' ')
-  fdat.write('\n')
-  wavenum+=1
+  N=len(volts)
+  if N==281:
+    y=yfac*(np.array(volts)/25)-yoff
+    if np.any(y[1:]<=vthr):
+      ttrg=time.strftime('%H:%M:%S',time.localtime(time.time()))
+      fdat.write('FC: {0} {1}\n'.format(ttrg,wavenum))
+      np.savetxt(fdat,y,fmt='%1.4f',newline=' ')
+      fdat.write('\n')
+      wavenum+=1
+  scope.write(':trmd single')
 
 t1=time.time()
 dt=datetime.timedelta(seconds=(t1-t0))
-print('Acquisition completed in: {0} hrs.'.format(str(dt))[0:7])
+print(dt)
+print('Acquisition completed in: {0} hrs'.format(str(dt)[0:7]))
 print('Capture rate: {0} (Hz)'.format(nwav/dt.total_seconds()))
 scope.close()
